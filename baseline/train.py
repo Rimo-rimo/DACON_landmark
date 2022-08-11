@@ -22,6 +22,10 @@ CFG = {
     'SEED':41, #시드
 }
 
+wandb.init(project="DACON_landmark", entity="rimmo")
+wandb.run.name = 'test'
+wandb.config.update(CFG)
+
 # 환경 설정
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"  # Arrange GPU devices starting from 0
@@ -221,7 +225,5 @@ def train(model, optimizer, train_loader, scheduler, device):
 
 
 if __name__ == "__main__":
-    wandb.init()
-    wandb.config.update(CFG)
     # 학습
     train(model, optimizer, train_loader, scheduler, device)
