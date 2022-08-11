@@ -162,7 +162,7 @@ class CNNclassification(torch.nn.Module):
 
 # 학습 하이퍼 파라미터
 model = CNNclassification().to(device)
-# wandb.watch(model)
+wandb.watch(model)
 criterion = torch.nn.CrossEntropyLoss()
 optimizer = torch.optim.SGD(params = model.parameters(), lr = CFG["LEARNING_RATE"])
 scheduler = None
@@ -209,10 +209,10 @@ def train(model, optimizer, train_loader, scheduler, device):
                 correct += pred.eq(label.view_as(pred)).sum().item() #예측값과 실제값이 맞으면 1 아니면 0으로 합산
         vali_acc = 100 * correct / len(vali_loader.dataset)
         print('Vail set: Loss: {:.4f}, Accuracy: {}/{} ( {:.0f}%)\n'.format(vali_loss / len(vali_loader), correct, len(vali_loader.dataset), 100 * correct / len(vali_loader.dataset)))
-        # wandb.log({
-        #     "Valid_Accuracy": 100 * correct / len(vali_loader.dataset),
-        #     "Valid_Loss": vali_loss / len(vali_loader),
-        #     })
+        wandb.log({
+            "Valid_Accuracy": 100 * correct / len(vali_loader.dataset),
+            "Valid_Loss": vali_loss / len(vali_loader),
+            })
         #베스트 모델 저장
         if best_acc < vali_acc:
             best_acc = vali_acc
@@ -221,7 +221,7 @@ def train(model, optimizer, train_loader, scheduler, device):
 
 
 if __name__ == "__main__":
-    # wandb.init()
-    # wandb.config.update(CFG)
+    wandb.init()
+    wandb.config.update(CFG)
     # 학습
     train(model, optimizer, train_loader, scheduler, device)
