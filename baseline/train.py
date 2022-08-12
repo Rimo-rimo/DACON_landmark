@@ -12,12 +12,16 @@ from torch.utils.data import DataLoader, Dataset
 import torch.optim as optim # 최적화 알고리즘들이 포함힘
 import wandb
 
+import albumentations as A
+from albumentations import *
+from albumentations.pytorch import ToTensorV2
+
 
 #하이퍼 파라미터 튜닝
 CFG = {
     'IMG_SIZE':128, #이미지 사이즈
     'EPOCHS':50, #에포크
-    'LEARNING_RATE':2e-2, #학습률
+    'LEARNING_RATE':0.0001, #학습률
     'BATCH_SIZE':64, #배치사이즈
     'SEED':41, #시드
 }
@@ -80,17 +84,48 @@ class CustomDataset(Dataset):
         return len(self.img_path_list)
     
 # transform 
-train_transform = transforms.Compose([
-                    transforms.ToPILImage(), #Numpy배열에서 PIL이미지로
-                    transforms.Resize([CFG['IMG_SIZE'], CFG['IMG_SIZE']]), #이미지 사이즈 변형
-                    transforms.ToTensor(), #이미지 데이터를 tensor
-                    transforms.Normalize(mean=(0.5, 0.5, 0.5), std=(0.5, 0.5, 0.5)) #이미지 정규화              
-                    ])
+# train_transform = transforms.Compose([
+#                     transforms.ToPILImage(), #Numpy배열에서 PIL이미지로
+#                     transforms.Resize([CFG['IMG_SIZE'], CFG['IMG_SIZE']]), #이미지 사이즈 변형
+#                     transforms.ToTensor(), #이미지 데이터를 tensor
+#                     transforms.Normalize(mean=(0.5, 0.5, 0.5), std=(0.5, 0.5, 0.5)) #이미지 정규화              
+#                     ])
+# test_transform = transforms.Compose([
+#                     transforms.ToPILImage(),
+#                     transforms.Resize([CFG['IMG_SIZE'], CFG['IMG_SIZE']]),
+#                     transforms.ToTensor(),
+#                     transforms.Normalize(mean=(0.5, 0.5, 0.5), std=(0.5, 0.5, 0.5))
+#                     ])
+
+train_transform = A.Compose([
+                        A.GaussNoise(always_apply=False, p=0.3, var_limit=(159.3, 204.6)),
+                        A.MotionBlur(always_apply=False, p=0.3, blur_limit=(8, 11)),
+                        A.OneOf([
+                            A.Rotate(always_apply=False, p=1.0, limit=(-14, 14), interpolation=0, border_mode=4, value=(0, 0, 0), mask_value=None),
+                            A.HorizontalFlip(always_apply=False, p=1.0),
+                                ],p=0.5),
+                        A.OneOf([
+                            A.ElasticTransform(always_apply=False, p=1.0, alpha=1.0, sigma=50.0, alpha_affine=50.0, interpolation=0, border_mode=4, value=(0, 0, 0), mask_value=None, approximate=False),
+                            A.OpticalDistortion(always_apply=False, p=1.0, distort_limit=(-0.30, 0.30), shift_limit=(-0.05, 0.05), interpolation=0, border_mode=4, value=(0, 0, 0), mask_value=None),
+                            A.RandomResizedCrop(always_apply=False, p=1.0, height=540, width=960, scale=(0.5, 1.0), ratio=(0.75, 1.3), interpolation=0),
+                            A.RandomSizedCrop(always_apply=False, p=1.0, min_max_height=(540, 540), height=540, width=960, w2h_ratio=1.0, interpolation=0),
+                            A.CenterCrop(always_apply=False, p=1.0, height=421, width=735),
+                            A.GridDistortion(always_apply=False, p=1.0, num_steps=5, distort_limit=(-0.3, 0.3), interpolation=0, border_mode=4, value=(0, 0, 0), mask_value=None),
+                                ],p=0.3),
+                        A.OneOf([
+                            A.Equalize(always_apply=False, p=1.0, mode='cv', by_channels=True),
+                            A.HueSaturationValue(always_apply=False, p=1.0, hue_shift_limit=(-11, 11), sat_shift_limit=(-13, 13), val_shift_limit=(-15, 15)),
+                            A.RandomBrightness(always_apply=False, p=1.0, limit=(-0.2, 0.2)),
+                                ],p=0.3),             
+                        A.CoarseDropout(always_apply=False, p=0.5, max_holes=20, max_height=8, max_width=8, min_holes=20, min_height=8, min_width=8),
+                        A.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+                        ToTensorV2()
+                            ])
 test_transform = transforms.Compose([
                     transforms.ToPILImage(),
                     transforms.Resize([CFG['IMG_SIZE'], CFG['IMG_SIZE']]),
                     transforms.ToTensor(),
-                    transforms.Normalize(mean=(0.5, 0.5, 0.5), std=(0.5, 0.5, 0.5))
+                    transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
                     ])
 
 # 데이터 로드
@@ -168,7 +203,7 @@ class CNNclassification(torch.nn.Module):
 model = CNNclassification().to(device)
 wandb.watch(model)
 criterion = torch.nn.CrossEntropyLoss()
-optimizer = torch.optim.SGD(params = model.parameters(), lr = CFG["LEARNING_RATE"])
+optimizer = torch.optim.Adam(params = model.parameters(), lr = CFG["LEARNING_RATE"])
 scheduler = None
 
 # 학습
