@@ -76,8 +76,10 @@ class CustomDataset(Dataset):
     def __len__(self): #길이 return
         return len(self.img_path_list)
 
+h = 300
+w = 530
 train_transform = A.Compose([
-                        A.Resize(always_apply=False, p=1.0, height=540, width=960, interpolation=0),
+                        A.Resize(always_apply=False, p=1.0, height=h, width=w, interpolation=0),
                         A.GaussNoise(always_apply=False, p=0.3, var_limit=(159.3, 204.6)),
                         A.MotionBlur(always_apply=False, p=0.3, blur_limit=(8, 11)),
                         A.OneOf([
@@ -87,8 +89,8 @@ train_transform = A.Compose([
                         A.OneOf([
                             A.ElasticTransform(always_apply=False, p=1.0, alpha=1.0, sigma=50.0, alpha_affine=50.0, interpolation=0, border_mode=4, value=(0, 0, 0), mask_value=None, approximate=False),
                             A.OpticalDistortion(always_apply=False, p=1.0, distort_limit=(-0.30, 0.30), shift_limit=(-0.05, 0.05), interpolation=0, border_mode=4, value=(0, 0, 0), mask_value=None),
-                            A.RandomResizedCrop(always_apply=False, p=1.0, height=540, width=960, scale=(0.5, 1.0), ratio=(0.75, 1.3), interpolation=0),
-                            A.RandomSizedCrop(always_apply=False, p=1.0, min_max_height=(540, 540), height=540, width=960, w2h_ratio=1.0, interpolation=0),
+                            A.RandomResizedCrop(always_apply=False, p=1.0, height=h, width=w, scale=(0.5, 1.0), ratio=(0.75, 1.3), interpolation=0),
+                            A.RandomSizedCrop(always_apply=False, p=1.0, min_max_height=(h, h), height=h, width=w, w2h_ratio=1.0, interpolation=0),
                             A.GridDistortion(always_apply=False, p=1.0, num_steps=5, distort_limit=(-0.3, 0.3), interpolation=0, border_mode=4, value=(0, 0, 0), mask_value=None),
                                 ],p=0.3),
                         A.OneOf([
@@ -100,7 +102,7 @@ train_transform = A.Compose([
                         ToTensorV2()
                             ])
 test_transform = A.Compose([
-                        A.Resize(always_apply=False, p=1.0, height=540, width=960, interpolation=0),
+                        A.Resize(always_apply=False, p=1.0, height=h, width=w, interpolation=0),
                         A.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
                         ToTensorV2()
                             ])
@@ -116,7 +118,7 @@ def get_data(data_dir, data_csv):
 data_dir = '/content/drive/MyDrive/DACON_landmark/dataset/test'
 test_csv = '/content/drive/MyDrive/DACON_landmark/dataset/test.csv'
 
-test_img_path, train_label = get_data(data_dir, test_csv)
+test_img_path = get_data(data_dir, test_csv)
 
 test_dataset = CustomDataset(test_img_path, None, train_mode=False, transforms=test_transform)
 test_loader = DataLoader(test_dataset, batch_size = CFG['BATCH_SIZE'], shuffle=False, num_workers=2)

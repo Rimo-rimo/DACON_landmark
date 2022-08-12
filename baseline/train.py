@@ -6,11 +6,13 @@ from tqdm.auto import tqdm
 import cv2
 import torch
 import torch.nn as nn
+import torchvision
 import torchvision.datasets as datasets # 이미지 데이터셋 집합체
 import torchvision.transforms as transforms # 이미지 변환 툴
 from torch.utils.data import DataLoader, Dataset
 import torch.optim as optim # 최적화 알고리즘들이 포함힘
 import wandb
+from collections import Counter
 
 import albumentations as A
 from albumentations import *
@@ -22,12 +24,12 @@ CFG = {
     'IMG_SIZE':128, #이미지 사이즈
     'EPOCHS':50, #에포크
     'LEARNING_RATE':0.0001, #학습률
-    'BATCH_SIZE':64, #배치사이즈
+    'BATCH_SIZE':16, #배치사이즈
     'SEED':41, #시드
 }
 
 wandb.init(project="DACON_landmark", entity="rimmo")
-wandb.run.name = 'test'
+wandb.run.name = 'swin_b'
 wandb.config.update(CFG)
 
 # 환경 설정
@@ -96,9 +98,10 @@ class CustomDataset(Dataset):
 #                     transforms.ToTensor(),
 #                     transforms.Normalize(mean=(0.5, 0.5, 0.5), std=(0.5, 0.5, 0.5))
 #                     ])
-
+h = 300
+w = 530
 train_transform = A.Compose([
-                        A.Resize(always_apply=False, p=1.0, height=540, width=960, interpolation=0),
+                        A.Resize(always_apply=False, p=1.0, height=h, width=w, interpolation=0),
                         A.GaussNoise(always_apply=False, p=0.3, var_limit=(159.3, 204.6)),
                         A.MotionBlur(always_apply=False, p=0.3, blur_limit=(8, 11)),
                         A.OneOf([
@@ -108,8 +111,8 @@ train_transform = A.Compose([
                         A.OneOf([
                             A.ElasticTransform(always_apply=False, p=1.0, alpha=1.0, sigma=50.0, alpha_affine=50.0, interpolation=0, border_mode=4, value=(0, 0, 0), mask_value=None, approximate=False),
                             A.OpticalDistortion(always_apply=False, p=1.0, distort_limit=(-0.30, 0.30), shift_limit=(-0.05, 0.05), interpolation=0, border_mode=4, value=(0, 0, 0), mask_value=None),
-                            A.RandomResizedCrop(always_apply=False, p=1.0, height=540, width=960, scale=(0.5, 1.0), ratio=(0.75, 1.3), interpolation=0),
-                            A.RandomSizedCrop(always_apply=False, p=1.0, min_max_height=(540, 540), height=540, width=960, w2h_ratio=1.0, interpolation=0),
+                            A.RandomResizedCrop(always_apply=False, p=1.0, height=h, width=w, scale=(0.5, 1.0), ratio=(0.75, 1.3), interpolation=0),
+                            A.RandomSizedCrop(always_apply=False, p=1.0, min_max_height=(h, h), height=h, width=w, w2h_ratio=1.0, interpolation=0),
                             A.GridDistortion(always_apply=False, p=1.0, num_steps=5, distort_limit=(-0.3, 0.3), interpolation=0, border_mode=4, value=(0, 0, 0), mask_value=None),
                                 ],p=0.3),
                         A.OneOf([
@@ -121,7 +124,7 @@ train_transform = A.Compose([
                         ToTensorV2()
                             ])
 test_transform = A.Compose([
-                        A.Resize(always_apply=False, p=1.0, height=540, width=960, interpolation=0),
+                        A.Resize(always_apply=False, p=1.0, height=h, width=w, interpolation=0),
                         A.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
                         ToTensorV2()
                             ])
@@ -140,6 +143,7 @@ train_csv = '/content/drive/MyDrive/DACON_landmark/dataset/train_4.csv'
 valid_csv = '/content/drive/MyDrive/DACON_landmark/dataset/valid_4.csv'
 train_img_path, train_label = get_data(data_dir, train_csv)
 valid_img_path, valid_label = get_data(data_dir, valid_csv)
+valid_counter = dict(Counter(valid_label))
 
 
 # Get Dataloader
@@ -154,7 +158,8 @@ vali_loader = DataLoader(vali_dataset, batch_size = CFG['BATCH_SIZE'], shuffle=F
 
 
 # 학습 하이퍼 파라미터
-model = torch.hub.load('pytorch/vision:v0.10.0', 'resnet18', pretrained=False)
+# model = torch.hub.load('pytorch/vision:v0.10.0', 'resnet18', pretrained=False)
+model = torchvision.models.swin_b()
 wandb.watch(model)
 criterion = torch.nn.CrossEntropyLoss()
 optimizer = torch.optim.Adam(params = model.parameters(), lr = CFG["LEARNING_RATE"])
@@ -193,23 +198,29 @@ def train(model, optimizer, train_loader, scheduler, device):
         vali_loss = 0.0
         correct = 0
         with torch.no_grad(): #파라미터 업데이트 안하기 때문에 no_grad 사용
+            valid_correct_counter = [0]*10
             for img, label in tqdm(iter(vali_loader)):
                 img, label = img.to(device), label.to(device)
 
                 logit = model(img)
                 vali_loss += criterion(logit, label)
                 pred = logit.argmax(dim=1, keepdim=True)  #11개의 class중 가장 값이 높은 것을 예측 label로 추출
+                for i in range(len(pred)):
+                    if pred[i].item() == label[i].item():
+                        valid_correct_counter[pred[i].item()] += 1
                 correct += pred.eq(label.view_as(pred)).sum().item() #예측값과 실제값이 맞으면 1 아니면 0으로 합산
+            valid_log_set = dict()
+            for i in valid_counter:
+                valid_log_set[f"About_{i}"] = valid_correct_counter[i] / valid_counter[i]
         vali_acc = 100 * correct / len(vali_loader.dataset)
         print('Vail set: Loss: {:.4f}, Accuracy: {}/{} ( {:.0f}%)\n'.format(vali_loss / len(vali_loader), correct, len(vali_loader.dataset), 100 * correct / len(vali_loader.dataset)))
-        wandb.log({
-            "Valid_Accuracy": 100 * correct / len(vali_loader.dataset),
-            "Valid_Loss": vali_loss / len(vali_loader),
-            })
+        valid_log_set["Valid_Accuracy"] = 100 * correct / len(vali_loader.dataset)
+        valid_log_set["Valid_Loss"] = vali_loss / len(vali_loader)
+        wandb.log(valid_log_set)
         #베스트 모델 저장
         if best_acc < vali_acc:
             best_acc = vali_acc
-            torch.save(model.state_dict(), '/content/drive/MyDrive/DACON_landmark/trained_weight/test_model.pth') #이 디렉토리에 best_model.pth을 저장
+            torch.save(model.state_dict(), f'/content/drive/MyDrive/DACON_landmark/trained_weight/swin_b_epoch{epoch}.pth') #이 디렉토리에 best_model.pth을 저장
             print('Model Saved.')
 
 
