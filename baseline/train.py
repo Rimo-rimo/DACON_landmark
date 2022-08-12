@@ -72,7 +72,7 @@ class CustomDataset(Dataset):
         #print(img_path)
         image = cv2.imread(img_path)
         if self.transforms is not None:
-            image = self.transforms(image)
+            image = self.transforms(image=image)["image"]
 
         if self.train_mode:
             label = self.label_list[index]
@@ -98,6 +98,7 @@ class CustomDataset(Dataset):
 #                     ])
 
 train_transform = A.Compose([
+                        A.Resize(always_apply=False, p=1.0, height=540, width=960, interpolation=0),
                         A.GaussNoise(always_apply=False, p=0.3, var_limit=(159.3, 204.6)),
                         A.MotionBlur(always_apply=False, p=0.3, blur_limit=(8, 11)),
                         A.OneOf([
@@ -121,12 +122,11 @@ train_transform = A.Compose([
                         A.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
                         ToTensorV2()
                             ])
-test_transform = transforms.Compose([
-                    transforms.ToPILImage(),
-                    transforms.Resize([CFG['IMG_SIZE'], CFG['IMG_SIZE']]),
-                    transforms.ToTensor(),
-                    transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-                    ])
+test_transform = A.Compose([
+                        A.Resize(always_apply=False, p=1.0, height=540, width=960, interpolation=0),
+                        A.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+                        ToTensorV2()
+                            ])
 
 # 데이터 로드
 def get_data(data_dir, data_csv):
