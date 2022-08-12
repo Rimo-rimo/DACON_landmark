@@ -115,8 +115,7 @@ train_transform = A.Compose([
                                 ],p=0.3),
                         A.OneOf([
                             A.Equalize(always_apply=False, p=1.0, mode='cv', by_channels=True),
-                            A.HueSaturationValue(always_apply=False, p=1.0, hue_shift_limit=(-11, 11), sat_shift_limit=(-13, 13), val_shift_limit=(-15, 15)),
-                            A.RandomBrightness(always_apply=False, p=1.0, limit=(-0.2, 0.2)),
+                            A.HueSaturationValue(always_apply=False, p=1.0, hue_shift_limit=(-11, 11), sat_shift_limit=(-13, 13), val_shift_limit=(-15, 15))
                                 ],p=0.3),             
                         A.CoarseDropout(always_apply=False, p=0.5, max_holes=20, max_height=8, max_width=8, min_holes=20, min_height=8, min_width=8),
                         A.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
@@ -148,11 +147,11 @@ valid_img_path, valid_label = get_data(data_dir, valid_csv)
 #CustomDataset class를 통하여 train dataset생성
 train_dataset = CustomDataset(train_img_path, train_label, train_mode=True, transforms=train_transform) 
 #만든 train dataset를 DataLoader에 넣어 batch 만들기
-train_loader = DataLoader(train_dataset, batch_size = CFG['BATCH_SIZE'], shuffle=True, num_workers=2)
+train_loader = DataLoader(train_dataset, batch_size = CFG['BATCH_SIZE'], shuffle=True, num_workers=0)
 
 #vaildation 에서도 적용
 vali_dataset = CustomDataset(valid_img_path, valid_label, train_mode=True, transforms=test_transform)
-vali_loader = DataLoader(vali_dataset, batch_size = CFG['BATCH_SIZE'], shuffle=False, num_workers=2)
+vali_loader = DataLoader(vali_dataset, batch_size = CFG['BATCH_SIZE'], shuffle=False, num_workers=0
 
 
 # 모델
