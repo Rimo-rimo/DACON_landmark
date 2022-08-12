@@ -138,8 +138,8 @@ def get_data(data_dir, data_csv):
     return img_path, label
 
 data_dir = '/content/drive/MyDrive/DACON_landmark/dataset/train'
-train_csv = '/content/drive/MyDrive/DACON_landmark/dataset/train_1.csv'
-valid_csv = '/content/drive/MyDrive/DACON_landmark/dataset/valid_1.csv'
+train_csv = '/content/drive/MyDrive/DACON_landmark/dataset/train_4.csv'
+valid_csv = '/content/drive/MyDrive/DACON_landmark/dataset/valid_4.csv'
 train_img_path, train_label = get_data(data_dir, train_csv)
 valid_img_path, valid_label = get_data(data_dir, valid_csv)
 
