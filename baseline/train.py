@@ -110,7 +110,6 @@ train_transform = A.Compose([
                             A.OpticalDistortion(always_apply=False, p=1.0, distort_limit=(-0.30, 0.30), shift_limit=(-0.05, 0.05), interpolation=0, border_mode=4, value=(0, 0, 0), mask_value=None),
                             A.RandomResizedCrop(always_apply=False, p=1.0, height=540, width=960, scale=(0.5, 1.0), ratio=(0.75, 1.3), interpolation=0),
                             A.RandomSizedCrop(always_apply=False, p=1.0, min_max_height=(540, 540), height=540, width=960, w2h_ratio=1.0, interpolation=0),
-                            A.CenterCrop(always_apply=False, p=1.0, height=421, width=735),
                             A.GridDistortion(always_apply=False, p=1.0, num_steps=5, distort_limit=(-0.3, 0.3), interpolation=0, border_mode=4, value=(0, 0, 0), mask_value=None),
                                 ],p=0.3),
                         A.OneOf([
@@ -151,55 +150,11 @@ train_loader = DataLoader(train_dataset, batch_size = CFG['BATCH_SIZE'], shuffle
 
 #vaildation 에서도 적용
 vali_dataset = CustomDataset(valid_img_path, valid_label, train_mode=True, transforms=test_transform)
-vali_loader = DataLoader(vali_dataset, batch_size = CFG['BATCH_SIZE'], shuffle=False, num_workers=0
-
-
-# 모델
-class CNNclassification(torch.nn.Module):
-    def __init__(self):
-        super(CNNclassification, self).__init__()
-        self.layer1 = torch.nn.Sequential(
-            nn.Conv2d(3, 8, kernel_size=3, stride=1, padding=1), #cnn layer
-            nn.ReLU(), #activation function
-            nn.MaxPool2d(kernel_size=2, stride=2)) #pooling layer
-        
-        self.layer2 = torch.nn.Sequential(
-            nn.Conv2d(8, 16, kernel_size=3, stride=1, padding=1), #cnn layer
-            nn.ReLU(), #activation function
-            nn.MaxPool2d(kernel_size=2, stride=2)) #pooling layer
-        
-        self.layer3 = torch.nn.Sequential(
-            nn.Conv2d(16, 32, kernel_size=3, stride=1, padding=1), #cnn layer
-            nn.ReLU(), #activation function
-            nn.MaxPool2d(kernel_size=2, stride=2)) #pooling layer
-        
-        self.layer4 = torch.nn.Sequential(
-            nn.Conv2d(32, 64, kernel_size=4, stride=1, padding=1), #cnn layer
-            nn.ReLU(), #activation function
-            nn.MaxPool2d(kernel_size=2, stride=2)) #pooling layer
-        
-        self.fc_layer = nn.Sequential( 
-            nn.Linear(3136, 10) #fully connected layer(ouput layer)
-        )    
-        
-    def forward(self, x):
-        
-        x = self.layer1(x) #1층
-        
-        x = self.layer2(x) #2층
-         
-        x = self.layer3(x) #3층
-        
-        x = self.layer4(x) #4층
-        
-        x = torch.flatten(x, start_dim=1) # N차원 배열 -> 1차원 배열
-        
-        out = self.fc_layer(x)
-        return out
+vali_loader = DataLoader(vali_dataset, batch_size = CFG['BATCH_SIZE'], shuffle=False, num_workers=0)
 
 
 # 학습 하이퍼 파라미터
-model = CNNclassification().to(device)
+model = torch.hub.load('pytorch/vision:v0.10.0', 'resnet18', pretrained=False)
 wandb.watch(model)
 criterion = torch.nn.CrossEntropyLoss()
 optimizer = torch.optim.Adam(params = model.parameters(), lr = CFG["LEARNING_RATE"])
