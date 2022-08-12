@@ -10,7 +10,6 @@ import torchvision.datasets as datasets # 이미지 데이터셋 집합체
 import torchvision.transforms as transforms # 이미지 변환 툴
 from torch.utils.data import DataLoader, Dataset
 import torch.optim as optim # 최적화 알고리즘들이 포함힘
-import wandb
 
 import albumentations as A
 from albumentations import *
